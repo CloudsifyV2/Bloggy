@@ -6,8 +6,8 @@ include 'components/navbar.php';
 $id = $_GET['id'] ?? null;
 
 if (!$id || !is_numeric($id)) {
-    echo "Invalid post ID.";
-    exit;
+  echo "Invalid post ID.";
+  exit;
 }
 
 // Fetch the post with the author info
@@ -22,8 +22,8 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
-    echo "Post not found.";
-    exit;
+  echo "Post not found.";
+  exit;
 }
 
 $post = $result->fetch_assoc();
@@ -32,12 +32,14 @@ $conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="styles/content.css">
   <title><?php echo htmlspecialchars($post['title']); ?></title>
 </head>
+
 <body>
   <div class="hero">
     <img src="<?php echo htmlspecialchars($post['image_url']); ?>" alt="<?php echo htmlspecialchars($post['title']); ?>">
@@ -56,7 +58,7 @@ $conn->close();
           <?php
           $tagsArray = explode(',', $post['tags']);
           foreach ($tagsArray as $tag) {
-              echo '<span class="tag">' . htmlspecialchars(trim($tag)) . '</span>';
+            echo '<span class="tag">' . htmlspecialchars(trim($tag)) . '</span>';
           }
           ?>
         </div>
@@ -72,6 +74,76 @@ $conn->close();
         </div>
       </div>
     </article>
+
+    <article class="comments-section">
+      <div class="article-content">
+        <h1>Comments</h1>
+        <div id="comments-container">
+          <!-- Comments will be loaded here via PHP -->
+
+        </div>
+      </div>
+
+      <div class="comment-form">
+        <textarea id="comment-text" placeholder="Write your comment..."></textarea><br>
+        <button onclick="submitComment()">Submit</button>
+      </div>
+    </article>
   </div>
+
+  <script>
+    function loadComments() {
+      fetch("comments.php?post_id=<?php echo $id; ?>")
+        .then(res => res.json())
+        .then(data => {
+          let container = document.getElementById("comments-container");
+          container.innerHTML = "";
+
+          if (data.length === 0) {
+            container.innerHTML = "<p>No comments yet.</p>";
+            return;
+          }
+
+          data.forEach(comment => {
+            container.innerHTML += `
+              <div class="comment">
+                <p><strong>${comment.username}</strong>
+                <span class="date">${new Date(comment.created_at).toLocaleString()}</span></p>
+                <p>${comment.comment_text}</p>
+                <hr>
+              </div>
+            `;
+          });
+        });
+    }
+
+    function submitComment() {
+      let text = document.getElementById("comment-text").value;
+
+      if (text.trim() === "") {
+        alert("Comment cannot be empty.");
+        return;
+      }
+
+      fetch("comments.php?post_id=<?php echo $id; ?>", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "comment=" + encodeURIComponent(text)
+      })
+        .then(res => res.text())
+        .then(data => {
+          if (data === "success") {
+            document.getElementById("comment-text").value = "";
+            loadComments(); // refresh comment list
+          } else {
+            alert(data);
+          }
+        });
+    }
+
+    loadComments();
+    </script>
+
 </body>
+
 </html>

@@ -81,7 +81,7 @@ function slugify($text) {
             <?php
         }
     } else {
-        echo '<p>No posts found.</p>';
+        $_SESSION['error'] = "No posts found.";
     }
 
     // Get all unique, capitalized tags for logging
@@ -108,7 +108,7 @@ function slugify($text) {
   </div>
 
   <div class="no-results hidden" id="noResults">
-    <p>No posts found with the selected tag.</p>
+
   </div>
 
 </main>

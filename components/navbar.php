@@ -54,6 +54,16 @@ $userInitial = isset($_SESSION['username']) && $_SESSION['username'] !== ''
         </div>
     </nav>
 
+    <?php if (isset($_SESSION['error']) && $_SESSION['error'] !== ''): ?>
+        <div class="error-box" id="errorBox">
+            <span class="error-message"><?= htmlspecialchars($_SESSION['error']); ?></span>
+            <button class="error-close" id="closeError">&times;</button>
+        </div>
+    <?php 
+        unset($_SESSION['error']); 
+    endif; 
+    ?>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const toggle = document.querySelector('.navbar-toggle');
@@ -78,6 +88,19 @@ $userInitial = isset($_SESSION['username']) && $_SESSION['username'] !== ''
                     if (!dropdown.contains(e.target) && e.target !== avatar) {
                         dropdown.classList.remove('show');
                     }
+                });
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const closeError = document.getElementById('closeError');
+            const errorBox = document.getElementById('errorBox');
+
+            if (closeError && errorBox) {
+                closeError.addEventListener('click', () => {
+                    errorBox.style.opacity = "0";
+                    errorBox.style.transform = "translateY(-6px)";
+                    setTimeout(() => errorBox.remove(), 200);
                 });
             }
         });
