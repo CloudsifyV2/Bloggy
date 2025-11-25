@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 require_once __DIR__ . '/config/MySQL.php';
 
 $post_id = $_GET['post_id'] ?? null;
@@ -11,7 +13,8 @@ if (!$post_id || !is_numeric($post_id)) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!isset($_SESSION['username'])) {
-        die("You must be logged in to comment.");
+        echo "<p>You must be logged in to comment.</p>";
+        exit;
     }
 
     $comment = trim($_POST['comment']);
