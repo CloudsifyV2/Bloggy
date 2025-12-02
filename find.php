@@ -20,143 +20,126 @@ function slugify($text) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="styles/hub.css">
-  <title>Bloggy</title>
+  <title>Bloggy – Tag Search</title>
 </head>
 <body>
+
 <main class="container">
 
-  <!-- Tag Filter -->
+  <!-- Tag Search -->
   <div class="filter-section">
-    <h3>Filter by Tag</h3>
-    <div class="tag-filters" id="tagFilters">
-      <span class="tag-badge active" data-tag="">All Posts</span>
-      <span class="tag-badge inactive" data-tag="Technology">Technology</span>
-      <span class="tag-badge inactive" data-tag="Web Development">Web Development</span>
-      <span class="tag-badge inactive" data-tag="Design">Design</span>
-      <span class="tag-badge inactive" data-tag="UX">UX</span>
-      <span class="tag-badge inactive" data-tag="Travel">Travel</span>
-      <span class="tag-badge inactive" data-tag="Lifestyle">Lifestyle</span>
-      <span class="tag-badge inactive" data-tag="Food">Food</span>
-      <span class="tag-badge inactive" data-tag="Fitness">Fitness</span>
-      <span class="tag-badge inactive" data-tag="Business">Business</span>
-    </div>
+      <h3>Find by Tag</h3>
+      <input type="text" id="tagSearchInput" placeholder="Search tags..." />
   </div>
 
-  <!-- Blog Posts Grid -->
-  <div class="blog-grid" id="blogGrid">
-    <?php
-    $sql = "
-      SELECT posts.*, users.username AS author_name 
-      FROM posts
-      LEFT JOIN users ON posts.author_id = users.id
-      ORDER BY date_posted DESC
-    ";
-    $result = $conn->query($sql);
-
-    if ($result && $result->num_rows > 0) {
-        while ($post = $result->fetch_assoc()) {
-            $tagsArray = explode(',', $post['tags']);
-            $slug = slugify($post['title']);
-            $url = "post_content.php?id={$post['id']}&slug={$slug}";
-            $author = $post['author_name'] ?? 'Unknown Author';
-            ?>
-            <article class="blog-card" data-tags="<?php echo htmlspecialchars($post['tags']); ?>" onclick="window.location='<?php echo $url; ?>'">
-              <div class="blog-card-image-container">
-                <img src="<?php echo htmlspecialchars($post['image_url']); ?>" alt="<?php echo htmlspecialchars($post['title']); ?>" class="blog-card-image">
-              </div>
-              <div class="blog-card-header">
-                <div class="blog-card-tags">
-                  <?php foreach ($tagsArray as $t): ?>
-                    <span class="card-tag"><?php echo trim(htmlspecialchars($t)); ?></span>
-                  <?php endforeach; ?>
-                </div>
-                <h2 class="blog-card-title"><?php echo htmlspecialchars($post['title']); ?></h2>
-                <p class="blog-card-author">By <?php echo htmlspecialchars($author); ?></p>
-              </div>
-              <div class="blog-card-content">
-                <p class="blog-card-excerpt"><?php echo htmlspecialchars($post['excerpt']); ?></p>
-                <p class="blog-card-date"><?php echo date('F j, Y', strtotime($post['date_posted'])); ?></p>
-              </div>
-            </article>
-            <?php
-        }
-    } else {
-        echo '<p>No posts found.</p>';
-    }
-
-    // Get all unique, capitalized tags for logging
-    $tagsQuery = "SELECT tags FROM posts";
-    $tagsResult = $conn->query($tagsQuery);
-
-    $allTags = [];
-    if ($tagsResult && $tagsResult->num_rows > 0) {
-        while ($row = $tagsResult->fetch_assoc()) {
-            $tags = explode(',', $row['tags']);
-            foreach ($tags as $tag) {
-                $trimmed = trim($tag);
-                if (!empty($trimmed)) {
-                    $capitalized = ucfirst(strtolower($trimmed));
-                    $allTags[] = $capitalized;
-                }
-            }
-        }
-    }
-    $uniqueTags = array_unique($allTags);
-
-    $conn->close();
-    ?>
-  </div>
-
-  <div class="no-results hidden" id="noResults">
-    <p>No posts found with the selected tag.</p>
-  </div>
+  <!-- Live Search Results -->
+  <div id="searchResults" class="blog-grid hidden"></div>
+  <div id="noSearchResults" class="no-results hidden">No posts found.</div>
 
 </main>
 
 <script>
-  // Tag filtering functionality
-  const tagFilters = document.querySelectorAll('.tag-badge');
-  const blogCards = document.querySelectorAll('.blog-card');
-  const blogGrid = document.getElementById('blogGrid');
-  const noResults = document.getElementById('noResults');
+/* ------------------------------
+   Tag Search Logic
+------------------------------ */
 
-  tagFilters.forEach(badge => {
-    badge.addEventListener('click', () => {
-      const selectedTag = badge.getAttribute('data-tag');
+document.getElementById("tagSearchInput").addEventListener("input", function () {
+    let term = this.value.trim();
+    const resultsDiv = document.getElementById("searchResults");
+    const noResultsDiv = document.getElementById("noSearchResults");
 
-      // Update active state
-      tagFilters.forEach(b => {
-        b.classList.remove('active');
-        b.classList.add('inactive');
-      });
-      badge.classList.add('active');
-      badge.classList.remove('inactive');
+    // Clear old results
+    resultsDiv.innerHTML = "";
 
-      // Filter blog cards
-      let visibleCount = 0;
-      blogCards.forEach(card => {
-        const cardTags = card.getAttribute('data-tags').split(',');
-        if (selectedTag === '' || cardTags.includes(selectedTag)) {
-          card.classList.remove('hidden');
-          visibleCount++;
-        } else {
-          card.classList.add('hidden');
-        }
-      });
+    // If empty input → hide everything
+    if (term.length === 0) {
+        resultsDiv.classList.add("hidden");
+        noResultsDiv.classList.add("hidden");
+        return;
+    }
 
-      // Show/hide no results message
-      if (visibleCount === 0) {
-        blogGrid.classList.add('hidden');
-        noResults.classList.remove('hidden');
-      } else {
-        blogGrid.classList.remove('hidden');
-        noResults.classList.add('hidden');
-      }
+    fetch("DO/do_search_tags.php?term=" + encodeURIComponent(term))
+        .then(res => res.json())
+        .then(data => {
+            console.log("Results:", data);
+
+            if (data.length === 0) {
+                resultsDiv.classList.add("hidden");
+                noResultsDiv.classList.remove("hidden");
+                return;
+            }
+
+            noResultsDiv.classList.add("hidden");
+            resultsDiv.classList.remove("hidden");
+
+            data.forEach(post => {
+                let slug = slugify(post.title);
+                let url = `post_content.php?id=${post.id}&slug=${slug}`;
+                let tags = post.tags.split(",").map(t => t.trim());
+
+                let card = document.createElement("article");
+                card.classList.add("blog-card");
+                card.setAttribute("data-tags", post.tags);
+                card.onclick = () => window.location = url;
+
+                card.innerHTML = `
+                    <div class="blog-card-image-container">
+                        <img src="${post.image_url}" 
+                             alt="${escapeHtml(post.title)}" 
+                             class="blog-card-image">
+                    </div>
+
+                    <div class="blog-card-header">
+                        <div class="blog-card-tags">
+                           ${tags.map(t => `<span class="card-tag">${escapeHtml(capitalize(t))}</span>`).join("")}
+                        </div>
+                        <h2 class="blog-card-title">${escapeHtml(post.title)}</h2>
+                        <p class="blog-card-author">By ${escapeHtml(post.author_name || "Unknown Author")}</p>
+                    </div>
+
+                    <div class="blog-card-content">
+                        <p class="blog-card-excerpt">${escapeHtml(post.excerpt)}</p>
+                        <p class="blog-card-date">${formatDate(post.date_posted)}</p>
+                    </div>
+                `;
+
+                resultsDiv.appendChild(card);
+            });
+        });
+});
+
+/* ------------------------------
+   Helper Functions
+------------------------------ */
+
+function escapeHtml(text) {
+    if (!text) return "";
+    const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+    return text.replace(/[&<>"]/g, m => map[m]);
+}
+
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+function slugify(text) {
+    return text
+        .toLowerCase()
+        .replace(/[^\w]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+}
+
+function formatDate(dateStr) {
+    let date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
     });
-  });
-
-  const tagsFromDatabase = <?php echo json_encode(array_values($uniqueTags)); ?>;
-  console.log("Tags from database (capitalized):", tagsFromDatabase);
+}
 </script>
+
+<?php include 'components/footer.php'; ?>
 </body>
 </html>

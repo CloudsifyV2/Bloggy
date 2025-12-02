@@ -143,7 +143,7 @@ $conn->close();
 
     loadComments();
     </script>
-
+  <?php include 'components/footer.php'; ?>
 </body>
 
 </html>

@@ -100,6 +100,18 @@ $conn->close();
         }
       });
     });
+
+    async function isImageUrl(url) {
+      try {
+        const response = await fetch(url, { method: "HEAD" });
+        const contentType = response.headers.get("content-type");
+        return contentType && contentType.startsWith("image/");
+      } catch (err) {
+        return false;
+      }
+    }
   </script>
+    <?php include 'components/footer.php'; ?>
+
 </body>
 </html>

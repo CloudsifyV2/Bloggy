@@ -67,7 +67,7 @@ function slugify($text) {
               <div class="blog-card-header">
                 <div class="blog-card-tags">
                   <?php foreach ($tagsArray as $t): ?>
-                    <span class="card-tag"><?php echo trim(htmlspecialchars($t)); ?></span>
+                    <span class="card-tag"><?php echo trim(htmlspecialchars(ucfirst($t))); ?></span>
                   <?php endforeach; ?>
                 </div>
                 <h2 class="blog-card-title"><?php echo htmlspecialchars($post['title']); ?></h2>
@@ -158,5 +158,7 @@ function slugify($text) {
   const tagsFromDatabase = <?php echo json_encode(array_values($uniqueTags)); ?>;
   console.log("Tags from database (capitalized):", tagsFromDatabase);
 </script>
+
+  <?php include 'components/footer.php'; ?>
 </body>
 </html>
